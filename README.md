@@ -1,5 +1,5 @@
 # mini-shell 
-mini shell generated with chatgpt. I was just porting the code from this repo https://github.com/ljesparis/cli-calculator/ 
+mini shell generated with chatgpt. I was just wanted toport the code from this repo https://github.com/ljesparis/cli-calculator/ 
 
 https://github.com/user-attachments/assets/74a974e5-6224-4e8d-91fd-1d58f86aee8a
 
