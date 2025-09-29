@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Shell</title>
+
+  <script>
+    const importObject = {
+      env: {}
+    };
+
+    let wasmInstance = null;
+
+    WebAssembly.instantiateStreaming(fetch("interpreter.wasm"), importObject)
+      .then(obj => {
+        wasmInstance = obj.instance;
+        console.log("WASM loaded -> exports:", wasmInstance.exports);
+      })
+      .catch(err => {
+        return fetch("interpreter.wasm")
+          .then(resp => resp.arrayBuffer())
+          .then(buf => WebAssembly.instantiate(buf, importObject))
+          .then(obj => {
+            wasmInstance = obj.instance;
+            console.log("WASM loaded (fallback) -> exports:", wasmInstance.exports);
+          });
+      });
+
+    function _runExpression(input) {
+      const memory = wasmInstance.exports.memory;
+      const utf8 = new TextEncoder().encode(input);
+        
+      const ptr = 0;
+      new Uint8Array(memory.buffer, ptr, utf8.length).set(utf8);
+
+      return wasmInstance.exports.js_eval(ptr, utf8.length);
+    }
+  </script>
+
+  <style>
+    body {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: monospace;
+      margin: 0;
+      padding: 1rem;
+    }
+
+    #terminal {
+      background: #111;
+      padding: 1rem;
+      border-radius: 8px;
+      height: 80vh;
+      overflow-y: auto;
+    }
+
+    .line {
+      display: flex;
+    }
+
+    .prompt {
+      color: #0f0;
+      margin-right: 0.5rem;
+    }
+
+    #input {
+      background: transparent;
+      border: none;
+      color: #d4d4d4;
+      outline: none;
+      flex: 1;
+    }
+
+    .output {
+      color: #0af;
+    }
+
+    .error {
+      color: #f55;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal">
+    <div class="line">
+      <span class="prompt">$</span>
+      <input id="input" autofocus />
+    </div>
+  </div>
+
+  <script>
+    const terminal = document.getElementById("terminal");
+
+    function attachInputHandler() {
+      const input = document.getElementById("input");
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const expr = input.value.trim();
+          if (expr) {
+            printOutput(`$ ${expr}`, "");
+            printOutput(_runExpression(expr));
+          }
+          input.value = "";
+        }
+      });
+
+      input.focus();
+    }
+
+    function printOutput(text, cls = "output") {
+      const outLine = document.createElement("div");
+      outLine.textContent = text;
+      outLine.className = cls;
+      terminal.insertBefore(outLine, terminal.lastElementChild);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function clearTerminal() {
+      terminal.innerHTML = `
+        <div class="line">
+          <span class="prompt">$</span>
+          <input id="input" autofocus />
+        </div>`;
+      attachInputHandler();
+    }
+
+    // Ctrl+S to clear the screen
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        clearTerminal();
+      }
+    });
+
+    attachInputHandler();
+  </script>
+</body>
+</html>
+
